@@ -31,6 +31,16 @@ console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
 console.log("[CONFIG] OpenAI Base URL: " +process.env.OM_OPENAI_BASE_URL);
 console.log("[CONFIG] OpenAI API KEY: "+process.env.OPENAI_API_KEY);
 
+// Warn about configuration mismatch that causes embedding incompatibility
+if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
+    console.warn(
+        `[CONFIG] ⚠️  WARNING: Embedding configuration mismatch detected!\n` +
+        `         OM_EMBEDDINGS=${env.emb_kind} but OM_TIER=${tier}\n` +
+        `         Storage will use ${env.emb_kind} embeddings, but queries will use synthetic embeddings.\n` +
+        `         This causes semantic search to fail. Set OM_TIER=deep to fix.`
+    );
+}
+
 app.use(req_tracker_mw());
 
 app.use((req: any, res: any, next: any) => {
