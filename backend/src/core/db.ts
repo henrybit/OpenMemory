@@ -80,6 +80,7 @@ if (is_pg) {
             ssl,
         });
     let pg = pool(db_name);
+    console.log(`[DB] Using Postgres at ${process.env.OM_PG_HOST}:${process.env.OM_PG_PORT} DB: ${db_name}`);
     let cli: PoolClient | null = null;
     const sc = process.env.OM_PG_SCHEMA || "public";
     const m = `"${sc}"."${process.env.OM_PG_TABLE || "openmemory_memories"}"`;
@@ -90,7 +91,17 @@ if (is_pg) {
     const f = `"${sc}"."openmemory_memories_fts"`;
     const exec = async (sql: string, p: any[] = []) => {
         const c = cli || pg;
-        return (await c.query(sql, p)).rows;
+        // console.log("sql: "+sql);
+        // console.log("params: "+p);
+        // return (await c.query(sql, p)).rows;
+        try {
+            return (await c.query(sql, p)).rows;
+        } catch (error) {
+            console.error("SQL Error:", error);
+            console.error("Failed SQL:", sql);
+            console.error("With params:", p);
+            throw error;
+        }
     };
     run_async = async (sql, p = []) => {
         await exec(sql, p);

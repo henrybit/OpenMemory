@@ -13,7 +13,12 @@ let reqz = {
 
 const log_metric = async (type: string, value: number) => {
     try {
-        await run_async("insert into stats(type,count,ts) values(?,?,?)", [
+        // await run_async("insert into stats(type,count,ts) values(?,?,?)", [
+        //     type,
+        //     value,
+        //     Date.now(),
+        // ]);
+        await run_async("insert into stats(type,count,ts) values($1,$2,$3)", [
             type,
             value,
             Date.now(),

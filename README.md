@@ -27,9 +27,6 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
 - **Migration** - Easily migrate from Mem0, Zep and Supermemory.
-- **Vercel AI SDK** - We support Vercel AI SDK via api.
-- **Web Dashboard** - A self-hosted web dashboard is included, so managing memories becomes effortless.
-- **Chat with Memories** - In the self-hosted web dashboard, you can chat with your memories, ask them questions, etc.
 
 ### Uses
 
@@ -108,7 +105,7 @@ This approach improves recall accuracy while reducing costs.
 ### Summary
 
 OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.  
-Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / AWS / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
+Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
 
 ---
 
@@ -142,12 +139,12 @@ Requirements:
 
 - Node.js 20 or higher
 - SQLite 3.40 or higher (included)
-- Optional: OpenAI/Gemini/AWS API key or Ollama
+- Optional: OpenAI/Gemini API key or Ollama
 
 ```bash
 git clone https://github.com/caviraoss/openmemory.git
-cp .env.example .env
 cd openmemory/backend
+cp .env.example .env
 npm install
 npm run dev
 ```
@@ -230,7 +227,7 @@ OpenMemory uses Hierarchical Memory Decomposition (HMD):
 
 - Backend: TypeScript
 - Storage: SQLite or PostgreSQL
-- Embeddings: E5/BGE/OpenAI/Gemini/AWS/Ollama
+- Embeddings: E5/BGE/OpenAI/Gemini/Ollama
 - Scheduler: node-cron for decay and maintenance
 
 **Query flow:**
@@ -444,52 +441,6 @@ curl http://localhost:8080/users/user123/summary
 - **MCP support** - Built-in Model Context Protocol server
 - **Health checks** - `/health` and `/stats` endpoints
 
-### Vercel AI SDK (Optional)
-
-Use OpenMemory with the Vercel AI SDK without changing your SDK setup.
-
-- Env in your app:
-  - `OM_BASE_URL` → your OpenMemory URL
-  - `OM_API_KEY` → API key for your instance
-- Call before your completion request:
-
-```ts
-// Fetch compact context from OpenMemory
-const mem = await fetch(`${process.env.OM_BASE_URL}/query`, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${process.env.OM_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ user_id, query, k: 8 }),
-}).then((r) => r.json());
-
-const messages = [
-  ...originalMessages,
-  mem?.result
-    ? {
-        role: 'system',
-        content: `Relevant memory (OpenMemory):\n${mem.result}`,
-      }
-    : undefined,
-].filter(Boolean);
-```
-
-- Optional store after the run:
-
-```ts
-await fetch(`${process.env.OM_BASE_URL}/memories`, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${process.env.OM_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ user_id, content: summary, tags: ['chat'] }),
-});
-```
-
-- Full guide with an AI SDK streaming route example: `temp/content/integration/vercel-ai.md`
-
 ### LangGraph Integration
 
 Enable with environment variables:
@@ -689,8 +640,8 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 12. Telemetry
 
+## 12. Telemetry
 OpenMemory sends a single anonymous ping on startup so we know which configurations are being used. Collected fields: hostname, operating system, chosen embedding provider (`OM_EMBEDDINGS`), metadata backend (`OM_METADATA_BACKEND`), package version, RAM/storage estimates, and CPU model. No memory contents or user data leave your server. Opt out anytime via `OM_TELEMETRY=false`.
 
 ## 13. Contributing
@@ -713,13 +664,6 @@ make test
                     <img src="https://avatars.githubusercontent.com/u/81895400?v=4" width="100;" alt="nullure"/>
                     <br />
                     <sub><b>Morven</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/dontbanmeplz">
-                    <img src="https://avatars.githubusercontent.com/u/59851616?v=4" width="100;" alt="dontbanmeplz"/>
-                    <br />
-                    <sub><b>Chis</b></sub>
                 </a>
             </td>
             <td align="center">
@@ -750,8 +694,6 @@ make test
                     <sub><b>DoKoB0512</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/amihos">
                     <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
@@ -759,6 +701,8 @@ make test
                     <sub><b>Hossein Amirkhalili</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/jasonkneen">
                     <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
@@ -794,15 +738,6 @@ make test
                     <sub><b>Dhravya Shah</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/EikoocS">
-                    <img src="https://avatars.githubusercontent.com/u/80829508?v=4" width="100;" alt="EikoocS"/>
-                    <br />
-                    <sub><b>EikoocS</b></sub>
-                </a>
-            </td>
             <td align="center">
                 <a href="https://github.com/josephgoksu">
                     <img src="https://avatars.githubusercontent.com/u/6523823?v=4" width="100;" alt="josephgoksu"/>
@@ -810,6 +745,8 @@ make test
                     <sub><b>Joseph Goksu</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/lwsinclair">
                     <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>
@@ -844,9 +781,6 @@ Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other develope
 ---
 
 ## 16. Other Projects
-
-**OpenReason** - OpenReason is a reasoning engine that sits on top of any LLM provider.
-https://github.com/CaviraOSS/OpenReason
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM

@@ -118,6 +118,7 @@ export default function memories() {
                     content,
                     tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
                     metadata: { primary_sector: sector },
+                    user_id: '1'
                 }),
             })
             if (!res.ok) throw new Error('failed to add memory')

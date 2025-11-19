@@ -28,6 +28,9 @@ console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
 console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
 console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
+console.log("[CONFIG] OpenAI Base URL: " +process.env.OM_OPENAI_BASE_URL);
+console.log("[CONFIG] OpenAI API KEY: "+process.env.OPENAI_API_KEY);
+
 app.use(req_tracker_mw());
 
 app.use((req: any, res: any, next: any) => {
