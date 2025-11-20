@@ -48,6 +48,9 @@ export const env = {
     openai_chat_model: process.env.OM_OPENAI_CHAT_MODEL,
     gemini_key:
         process.env.GEMINI_API_KEY || process.env.OM_GEMINI_API_KEY || "",
+    AWS_REGION: process.env.AWS_REGION || "",
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
     ollama_url: str(
         process.env.OLLAMA_URL || process.env.OM_OLLAMA_URL,
         "http://localhost:11434",
