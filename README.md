@@ -674,6 +674,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/amihos">
+                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
+                    <br />
+                    <sub><b>Hossein Amirkhalili</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/recabasic">
                     <img src="https://avatars.githubusercontent.com/u/102372274?v=4" width="100;" alt="recabasic"/>
                     <br />
@@ -687,13 +694,8 @@ make test
                     <sub><b>Sriram M</b></sub>
                 </a>
             </td>
-            <td align="center">
-                <a href="https://github.com/amihos">
-                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
-                    <br />
-                    <sub><b>Hossein Amirkhalili</b></sub>
-                </a>
-            </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/DoKoB0512">
                     <img src="https://avatars.githubusercontent.com/u/123281216?v=4" width="100;" alt="DoKoB0512"/>
@@ -704,10 +706,10 @@ make test
 		</tr>
 		<tr>
             <td align="center">
-                <a href="https://github.com/jasonkneen">
-                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
+                <a href="https://github.com/pc-quiknode">
+                    <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
                     <br />
-                    <sub><b>Jason Kneen</b></sub>
+                    <sub><b>Peter Chung</b></sub>
                 </a>
             </td>
             <td align="center">
@@ -718,10 +720,10 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/pc-quiknode">
-                    <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
+                <a href="https://github.com/jasonkneen">
+                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
                     <br />
-                    <sub><b>Peter Chung</b></sub>
+                    <sub><b>Jason Kneen</b></sub>
                 </a>
             </td>
             <td align="center">
