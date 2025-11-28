@@ -15,9 +15,10 @@ let reqz = {
 
 const log_metric = async (type: string, value: number) => {
     try {
+        const sc = process.env.OM_PG_SCHEMA || "public";
         const sql = is_pg
-            ? `insert into ${stats_table}(type,count,ts) values($1,$2,$3)`
-            : `insert into ${stats_table}(type,count,ts) values(?,?,?)`;
+            ? `insert into "${sc}"."stats"(type,count,ts) values($1,$2,$3)`
+            : "insert into stats(type,count,ts) values(?,?,?)";
         await run_async(sql, [type, value, Date.now()]);
     } catch (e) {
         console.error("[metrics] log err:", e);
@@ -89,13 +90,15 @@ export function dash(app: any) {
                 "SELECT COUNT(*) as count FROM memories",
             );
             const sectcnt = await all_async(`
-                SELECT primary_sector, COUNT(*) as count 
-                FROM memories 
+                SELECT primary_sector, COUNT(*) as count
+                FROM memories
                 GROUP BY primary_sector
             `);
             const dayago = Date.now() - 24 * 60 * 60 * 1000;
             const recmem = await all_async(
-                "SELECT COUNT(*) as count FROM memories WHERE created_at > ?",
+                is_pg
+                    ? "SELECT COUNT(*) as count FROM memories WHERE created_at > $1"
+                    : "SELECT COUNT(*) as count FROM memories WHERE created_at > ?",
                 [dayago],
             );
             const avgsal = await all_async(
@@ -113,14 +116,19 @@ export function dash(app: any) {
 
             // Calculate QPS stats from database (last hour)
             const hour_ago = Date.now() - 60 * 60 * 1000;
-            const qps_sql = is_pg
-                ? `SELECT count, ts FROM ${stats_table} WHERE type=$1 AND ts > $2 ORDER BY ts DESC`
-                : `SELECT count, ts FROM ${stats_table} WHERE type=? AND ts > ? ORDER BY ts DESC`;
-            const qps_data = await all_async(qps_sql, ["qps", hour_ago]);
-            const err_sql = is_pg
-                ? `SELECT COUNT(*) as total FROM ${stats_table} WHERE type=$1 AND ts > $2`
-                : `SELECT COUNT(*) as total FROM ${stats_table} WHERE type=? AND ts > ?`;
-            const err_data = await all_async(err_sql, ["error", hour_ago]);
+            const sc = process.env.OM_PG_SCHEMA || "public";
+            const qps_data = await all_async(
+                is_pg
+                    ? `SELECT count, ts FROM "${sc}"."stats" WHERE type=$1 AND ts > $2 ORDER BY ts DESC`
+                    : "SELECT count, ts FROM stats WHERE type=? AND ts > ? ORDER BY ts DESC",
+                ["qps", hour_ago],
+            );
+            const err_data = await all_async(
+                is_pg
+                    ? `SELECT COUNT(*) as total FROM "${sc}"."stats" WHERE type=$1 AND ts > $2`
+                    : "SELECT COUNT(*) as total FROM stats WHERE type=? AND ts > ?",
+                ["error", hour_ago],
+            );
 
             const peak_qps =
                 qps_data.length > 0
@@ -233,10 +241,11 @@ export function dash(app: any) {
         try {
             const lim = parseInt(req.query.limit || "50");
             const recmem = await all_async(
-                `
-                SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
-                FROM memories ORDER BY updated_at DESC LIMIT ?
-            `,
+                is_pg
+                    ? `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
+                       FROM memories ORDER BY updated_at DESC LIMIT $1`
+                    : `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
+                       FROM memories ORDER BY updated_at DESC LIMIT ?`,
                 [lim],
             );
             res.json({
@@ -259,10 +268,11 @@ export function dash(app: any) {
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
             const tl = await all_async(
-                `
-                SELECT primary_sector, strftime('%H:00', datetime(created_at/1000, 'unixepoch')) as hour, COUNT(*) as count
-                FROM memories WHERE created_at > ? GROUP BY primary_sector, hour ORDER BY hour
-            `,
+                is_pg
+                    ? `SELECT primary_sector, to_char(to_timestamp(created_at/1000), 'HH24:00') as hour, COUNT(*) as count
+                       FROM memories WHERE created_at > $1 GROUP BY primary_sector, hour ORDER BY hour`
+                    : `SELECT primary_sector, strftime('%H:00', datetime(created_at/1000, 'unixepoch')) as hour, COUNT(*) as count
+                       FROM memories WHERE created_at > ? GROUP BY primary_sector, hour ORDER BY hour`,
                 [strt],
             );
             res.json({ timeline: tl });
@@ -275,10 +285,11 @@ export function dash(app: any) {
         try {
             const lim = parseInt(req.query.limit || "10");
             const topm = await all_async(
-                `
-                SELECT id, content, primary_sector, salience, last_seen_at
-                FROM memories ORDER BY salience DESC LIMIT ?
-            `,
+                is_pg
+                    ? `SELECT id, content, primary_sector, salience, last_seen_at
+                       FROM memories ORDER BY salience DESC LIMIT $1`
+                    : `SELECT id, content, primary_sector, salience, last_seen_at
+                       FROM memories ORDER BY salience DESC LIMIT ?`,
                 [lim],
             );
             res.json({
@@ -299,34 +310,23 @@ export function dash(app: any) {
         try {
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
+            const sc = process.env.OM_PG_SCHEMA || "public";
 
-            const ops_sql = is_pg
-                ? `
-                SELECT 
-                    type,
-                    to_char(to_timestamp(ts/1000), 'HH24:00') as hour,
-                    SUM(count) as cnt
-                FROM ${stats_table}
-                WHERE ts > $1
-                GROUP BY type, hour
-                ORDER BY hour
-            `
-                : `
-                SELECT 
-                    type,
-                    strftime('%H:00', datetime(ts/1000, 'unixepoch', 'localtime')) as hour,
-                    SUM(count) as cnt
-                FROM ${stats_table}
-                WHERE ts > ?
-                GROUP BY type, hour
-                ORDER BY hour
-            `;
-            const ops = await all_async(ops_sql, [strt]);
+            const ops = await all_async(
+                is_pg
+                    ? `SELECT type, to_char(to_timestamp(ts/1000), 'HH24:00') as hour, SUM(count) as cnt
+                       FROM "${sc}"."stats" WHERE ts > $1 GROUP BY type, hour ORDER BY hour`
+                    : `SELECT type, strftime('%H:00', datetime(ts/1000, 'unixepoch', 'localtime')) as hour, SUM(count) as cnt
+                       FROM stats WHERE ts > ? GROUP BY type, hour ORDER BY hour`,
+                [strt],
+            );
 
-            const totals_sql = is_pg
-                ? `SELECT type, SUM(count) as total FROM ${stats_table} WHERE ts > $1 GROUP BY type`
-                : `SELECT type, SUM(count) as total FROM ${stats_table} WHERE ts > ? GROUP BY type`;
-            const totals = await all_async(totals_sql, [strt]);
+            const totals = await all_async(
+                is_pg
+                    ? `SELECT type, SUM(count) as total FROM "${sc}"."stats" WHERE ts > $1 GROUP BY type`
+                    : `SELECT type, SUM(count) as total FROM stats WHERE ts > ? GROUP BY type`,
+                [strt],
+            );
 
             const by_hr: Record<string, any> = {};
             for (const op of ops) {
