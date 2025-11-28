@@ -27,12 +27,13 @@ services:
                   - OM_COMPRESSION_ALGORITHM=${OM_COMPRESSION_ALGORITHM:-auto}
                   - OM_COMPRESSION_MIN_LENGTH=${OM_COMPRESSION_MIN_LENGTH:-100}
 
-                  # Embeddings Configuration
-                  - OM_EMBEDDINGS=${OM_EMBEDDINGS:-synthetic}
-                  - OM_EMBED_MODE=${OM_EMBED_MODE:-simple}
-                  - OM_ADV_EMBED_PARALLEL=${OM_ADV_EMBED_PARALLEL:-false}
-                  - OM_EMBED_DELAY_MS=${OM_EMBED_DELAY_MS:-200}
-                  - OM_VEC_DIM=${OM_VEC_DIM:-256}
+      # Embeddings Configuration
+      - OM_EMBEDDINGS=${OM_EMBEDDINGS:-synthetic}
+      - OM_EMBEDDING_FALLBACK=${OM_EMBEDDING_FALLBACK:-synthetic}
+      - OM_EMBED_MODE=${OM_EMBED_MODE:-simple}
+      - OM_ADV_EMBED_PARALLEL=${OM_ADV_EMBED_PARALLEL:-false}
+      - OM_EMBED_DELAY_MS=${OM_EMBED_DELAY_MS:-200}
+      - OM_VEC_DIM=${OM_VEC_DIM:-256}
 
                   # OpenAI Provider
                   - OPENAI_API_KEY=${OPENAI_API_KEY:-}
