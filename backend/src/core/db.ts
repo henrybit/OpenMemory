@@ -173,7 +173,7 @@ if (is_pg) {
             `create table if not exists "${sc}"."openmemory_users"(user_id text primary key,summary text,reflection_count integer default 0,created_at bigint,updated_at bigint)`,
         );
         await pg.query(
-            `create table if not exists "${sc}"."stats"(id SERIAL primary key,type text not null,count integer default 1,ts bigint not null)`,
+            `create table if not exists "${sc}"."stats"(id serial primary key,type text not null,count integer default 1,ts bigint not null)`,
         );
         await pg.query(
             `create index if not exists openmemory_memories_sector_idx on ${m}(primary_sector)`,
@@ -194,10 +194,10 @@ if (is_pg) {
             `create index if not exists openmemory_waypoints_user_idx on ${w}(user_id)`,
         );
         await pg.query(
-            `create index if not exists idx_stats_ts on "${sc}"."stats"(ts)`,
+            `create index if not exists openmemory_stats_ts_idx on "${sc}"."stats"(ts)`,
         );
         await pg.query(
-            `create index if not exists idx_stats_type on "${sc}"."stats"(type)`,
+            `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
         );
         ready = true;
     };
@@ -786,12 +786,9 @@ export const log_maint_op = async (
     cnt = 1,
 ) => {
     try {
-        const is_pg = env.metadata_backend === "postgres";
-        const sc = process.env.OM_PG_SCHEMA || "public";
-        const table_name = is_pg ? `"${sc}"."stats"` : "stats";
         const sql = is_pg
-            ? `insert into ${table_name}(type,count,ts) values($1,$2,$3)`
-            : `insert into ${table_name}(type,count,ts) values(?,?,?)`;
+            ? `insert into "${process.env.OM_PG_SCHEMA || "public"}"."stats"(type,count,ts) values($1,$2,$3)`
+            : "insert into stats(type,count,ts) values(?,?,?)";
         await run_async(sql, [type, cnt, Date.now()]);
     } catch (e) {
         console.error("[DB] Maintenance log error:", e);
