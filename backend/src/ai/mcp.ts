@@ -320,9 +320,7 @@ export const create_mcp_srv = () => {
                         },
                     ],
                 };
-            const vecs = include_vectors
-                ? await vector_store.getVectorsById(id)
-                : [];
+            const vecs = include_vectors ? await vector_store.getVectorsById(id) : [];
             const pay = {
                 id: mem.id,
                 content: mem.content,
