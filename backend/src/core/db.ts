@@ -60,6 +60,13 @@ let memories_table: string;
 
 const is_pg = env.metadata_backend === "postgres";
 
+// Convert SQLite-style ? placeholders to PostgreSQL $1, $2, $3 placeholders
+function convertPlaceholders(sql: string): string {
+    if (!is_pg) return sql;
+    let index = 1;
+    return sql.replace(/\?/g, () => `$${index++}`);
+}
+
 if (is_pg) {
     const ssl =
         process.env.OM_PG_SSL === "require"
@@ -89,11 +96,8 @@ if (is_pg) {
     const f = `"${sc}"."openmemory_memories_fts"`;
     const exec = async (sql: string, p: any[] = []) => {
         const c = cli || pg;
-        // console.log("sql: "+sql);
-        // console.log("params: "+p);
-        // return (await c.query(sql, p)).rows;
         try {
-            return (await c.query(sql, p)).rows;
+            return (await c.query(convertPlaceholders(sql), p)).rows;
         } catch (error) {
             console.error("SQL Error:", error);
             console.error("Failed SQL:", sql);
@@ -162,7 +166,7 @@ if (is_pg) {
             `create table if not exists ${v}(id uuid,sector text,user_id text,v bytea,dim integer not null,primary key(id,sector))`,
         );
         await pg.query(
-            `create table if not exists ${w}(src_id text primary key,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint)`,
+            `create table if not exists ${w}(src_id text,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint,primary key(src_id,user_id))`,
         );
         await pg.query(
             `create table if not exists ${l}(id text primary key,model text,status text,ts bigint,err text)`,
@@ -207,8 +211,9 @@ if (is_pg) {
             vector_store = new ValkeyVectorStore();
             console.log("[DB] Using Valkey VectorStore");
         } else {
-            vector_store = new PostgresVectorStore({ run_async, get_async, all_async });
-            console.log("[DB] Using Postgres VectorStore");
+            const vt = process.env.OM_VECTOR_TABLE || "openmemory_vectors";
+            vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v.replace(/"/g, ""));
+            console.log(`[DB] Using Postgres VectorStore with table: ${v}`);
         }
     };
     init().catch((err) => {
@@ -328,7 +333,7 @@ if (is_pg) {
         ins_waypoint: {
             run: (...p) =>
                 run_async(
-                    `insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id) do update set dst_id=excluded.dst_id,user_id=excluded.user_id,weight=excluded.weight,updated_at=excluded.updated_at`,
+                    `insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id,user_id) do update set dst_id=excluded.dst_id,weight=excluded.weight,updated_at=excluded.updated_at`,
                     p,
                 ),
         },
@@ -543,8 +548,11 @@ if (is_pg) {
 
     if (env.vector_backend === "valkey") {
         vector_store = new ValkeyVectorStore();
+        console.log("[DB] Using Valkey VectorStore");
     } else {
-        vector_store = new PostgresVectorStore({ run_async, get_async, all_async });
+        const vt = process.env.OM_VECTOR_TABLE || "vectors";
+        vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, vt);
+        console.log(`[DB] Using SQLite VectorStore with table: ${vt}`);
     }
 
     transaction = {
