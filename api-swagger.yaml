@@ -1,0 +1,1873 @@
+openapi: 3.0.3
+info:
+  title: OpenMemory API
+  description: |
+    OpenMemory is a memory management system with advanced features including:
+    - Memory storage and retrieval
+    - Temporal fact tracking
+    - Reflection and insights
+    - IDE integration
+    - Compression utilities
+    - Dynamic salience calculations
+  version: 2.0.0
+  contact:
+    name: OpenMemory
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.openmemory.ai
+    description: Production server
+
+tags:
+  - name: System
+    description: System health and configuration endpoints
+  - name: Memory
+    description: Memory storage, retrieval, and management
+  - name: Dynamics
+    description: Advanced memory dynamics and salience calculations
+  - name: IDE
+    description: IDE integration endpoints
+  - name: Compression
+    description: Text compression utilities
+  - name: LangGraph
+    description: LangGraph memory integration
+  - name: Users
+    description: User-specific operations
+  - name: Temporal
+    description: Temporal fact tracking and timeline operations
+  - name: Dashboard
+    description: Dashboard statistics and monitoring
+  - name: Reflection
+    description: Reflection tasks and insights
+  - name: Vercel
+    description: Vercel AI SDK compatible endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Returns system health status and configuration
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  version:
+                    type: string
+                  embedding:
+                    type: object
+                  tier:
+                    type: string
+                  dim:
+                    type: integer
+                  cache:
+                    type: integer
+                  expected:
+                    type: object
+
+  /sectors:
+    get:
+      tags:
+        - System
+      summary: Get sector information
+      description: Returns available memory sectors and statistics
+      responses:
+        '200':
+          description: Sector information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sectors:
+                    type: array
+                    items:
+                      type: string
+                  configs:
+                    type: object
+                  stats:
+                    type: array
+                    items:
+                      type: object
+        '500':
+          description: Internal server error
+
+  /memory/add:
+    post:
+      tags:
+        - Memory
+      summary: Add a memory
+      description: Create a new memory entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: Memory content
+                tags:
+                  type: array
+                  items:
+                    type: string
+                metadata:
+                  type: object
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Memory created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+        '400':
+          description: Bad request - missing content
+        '500':
+          description: Internal server error
+
+  /memory/ingest:
+    post:
+      tags:
+        - Memory
+      summary: Ingest a document
+      description: Ingest a document of various formats (PDF, DOCX, HTML, MD, TXT, audio)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content_type
+                - data
+              properties:
+                content_type:
+                  type: string
+                  enum: [pdf, docx, html, md, txt, audio]
+                data:
+                  type: string
+                  description: Base64 encoded document data
+                metadata:
+                  type: object
+                config:
+                  type: object
+                  properties:
+                    force_root:
+                      type: boolean
+                    sec_sz:
+                      type: integer
+                    lg_thresh:
+                      type: number
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Document ingested successfully
+        '400':
+          description: Bad request
+        '500':
+          description: Ingestion failed
+
+  /memory/ingest/url:
+    post:
+      tags:
+        - Memory
+      summary: Ingest content from URL
+      description: Fetch and ingest content from a URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                metadata:
+                  type: object
+                config:
+                  type: object
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: URL content ingested successfully
+        '400':
+          description: Bad request - no URL provided
+        '500':
+          description: URL fetch failed
+
+  /memory/query:
+    post:
+      tags:
+        - Memory
+      summary: Query memories
+      description: Search for memories using semantic similarity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search query
+                k:
+                  type: integer
+                  default: 8
+                  description: Number of results to return
+                filters:
+                  type: object
+                  properties:
+                    sector:
+                      type: string
+                    min_score:
+                      type: number
+                    user_id:
+                      type: string
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  matches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryMatch'
+
+  /memory/reinforce:
+    post:
+      tags:
+        - Memory
+      summary: Reinforce a memory
+      description: Boost the salience of a memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                boost:
+                  type: number
+      responses:
+        '200':
+          description: Memory reinforced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Bad request
+        '404':
+          description: Memory not found
+
+  /memory/{id}:
+    get:
+      tags:
+        - Memory
+      summary: Get a memory by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memory details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryDetail'
+        '404':
+          description: Memory not found
+        '403':
+          description: Forbidden - user does not own this memory
+    patch:
+      tags:
+        - Memory
+      summary: Update a memory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                metadata:
+                  type: object
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Memory updated
+        '400':
+          description: Bad request
+        '404':
+          description: Memory not found
+        '403':
+          description: Forbidden
+    delete:
+      tags:
+        - Memory
+      summary: Delete a memory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memory deleted
+        '404':
+          description: Memory not found
+        '403':
+          description: Forbidden
+
+  /memory/all:
+    get:
+      tags:
+        - Memory
+      summary: Get all memories
+      parameters:
+        - name: u
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Offset
+        - name: l
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Limit
+        - name: sector
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of memories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryItem'
+
+  /dynamics/constants:
+    get:
+      tags:
+        - Dynamics
+      summary: Get dynamics constants
+      description: Returns all memory dynamics configuration constants
+      responses:
+        '200':
+          description: Dynamics constants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success_status_indicator:
+                    type: boolean
+                  dynamics_constants_configuration:
+                    type: object
+
+  /dynamics/salience/calculate:
+    post:
+      tags:
+        - Dynamics
+      summary: Calculate dynamic salience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                initial_salience:
+                  type: number
+                  default: 0.5
+                decay_lambda:
+                  type: number
+                  default: 0.01
+                recall_count:
+                  type: integer
+                  default: 0
+                emotional_frequency:
+                  type: number
+                  default: 0
+                time_elapsed_days:
+                  type: number
+                  default: 0
+      responses:
+        '200':
+          description: Calculated salience
+        '500':
+          description: Internal server error
+
+  /dynamics/resonance/calculate:
+    post:
+      tags:
+        - Dynamics
+      summary: Calculate cross-sector resonance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                memory_sector:
+                  type: string
+                  default: semantic
+                query_sector:
+                  type: string
+                  default: semantic
+                base_similarity:
+                  type: number
+                  default: 0.8
+      responses:
+        '200':
+          description: Resonance score calculated
+        '500':
+          description: Internal server error
+
+  /dynamics/retrieval/energy-based:
+    post:
+      tags:
+        - Dynamics
+      summary: Energy-based memory retrieval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                sector:
+                  type: string
+                  default: semantic
+                min_energy:
+                  type: number
+      responses:
+        '200':
+          description: Retrieved memories with energy scores
+        '400':
+          description: Query required
+        '500':
+          description: Internal server error
+
+  /dynamics/reinforcement/trace:
+    post:
+      tags:
+        - Dynamics
+      summary: Apply trace reinforcement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - memory_id
+              properties:
+                memory_id:
+                  type: string
+      responses:
+        '200':
+          description: Reinforcement applied
+        '400':
+          description: Memory ID required
+        '404':
+          description: Memory not found
+        '500':
+          description: Internal server error
+
+  /dynamics/activation/spreading:
+    post:
+      tags:
+        - Dynamics
+      summary: Perform spreading activation retrieval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - initial_memory_ids
+              properties:
+                initial_memory_ids:
+                  type: array
+                  items:
+                    type: string
+                max_iterations:
+                  type: integer
+                  default: 3
+      responses:
+        '200':
+          description: Spreading activation results
+        '400':
+          description: Initial memory IDs required
+        '500':
+          description: Internal server error
+
+  /dynamics/waypoints/graph:
+    get:
+      tags:
+        - Dynamics
+      summary: Get waypoint graph
+      description: Returns the associative waypoint graph structure
+      responses:
+        '200':
+          description: Waypoint graph
+        '500':
+          description: Internal server error
+
+  /dynamics/waypoints/calculate-weight:
+    post:
+      tags:
+        - Dynamics
+      summary: Calculate waypoint link weight
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source_memory_id
+                - target_memory_id
+              properties:
+                source_memory_id:
+                  type: string
+                target_memory_id:
+                  type: string
+      responses:
+        '200':
+          description: Calculated weight
+        '400':
+          description: Both memory IDs required
+        '404':
+          description: One or both memories not found
+        '500':
+          description: Internal server error
+
+  /api/ide/events:
+    post:
+      tags:
+        - IDE
+      summary: Record IDE event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - event_type
+              properties:
+                event_type:
+                  type: string
+                file_path:
+                  type: string
+                content:
+                  type: string
+                session_id:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Event recorded
+        '400':
+          description: Event type required
+        '500':
+          description: Internal server error
+
+  /api/ide/context:
+    post:
+      tags:
+        - IDE
+      summary: Get IDE context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                k:
+                  type: integer
+                  default: 5
+                session_id:
+                  type: string
+                file_path:
+                  type: string
+      responses:
+        '200':
+          description: Context memories
+        '400':
+          description: Query required
+        '500':
+          description: Internal server error
+
+  /api/ide/session/start:
+    post:
+      tags:
+        - IDE
+      summary: Start IDE session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                project_name:
+                  type: string
+                ide_name:
+                  type: string
+      responses:
+        '200':
+          description: Session started
+        '500':
+          description: Internal server error
+
+  /api/ide/session/end:
+    post:
+      tags:
+        - IDE
+      summary: End IDE session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+              properties:
+                session_id:
+                  type: string
+      responses:
+        '200':
+          description: Session ended
+        '400':
+          description: Session ID required
+        '500':
+          description: Internal server error
+
+  /api/ide/patterns/{session_id}:
+    get:
+      tags:
+        - IDE
+      summary: Get IDE patterns
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patterns detected
+        '400':
+          description: Session ID required
+        '500':
+          description: Internal server error
+
+  /api/compression/compress:
+    post:
+      tags:
+        - Compression
+      summary: Compress text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                algorithm:
+                  type: string
+                  enum: [semantic, syntactic, aggressive]
+      responses:
+        '200':
+          description: Compressed text
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  comp:
+                    type: string
+                  m:
+                    type: object
+                  hash:
+                    type: string
+        '400':
+          description: Text required
+        '500':
+          description: Internal server error
+
+  /api/compression/batch:
+    post:
+      tags:
+        - Compression
+      summary: Batch compress texts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - texts
+              properties:
+                texts:
+                  type: array
+                  items:
+                    type: string
+                algorithm:
+                  type: string
+                  enum: [semantic, syntactic, aggressive]
+                  default: semantic
+      responses:
+        '200':
+          description: Batch compression results
+        '400':
+          description: Texts must be array
+        '500':
+          description: Internal server error
+
+  /api/compression/analyze:
+    post:
+      tags:
+        - Compression
+      summary: Analyze text compression potential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: Analysis results
+        '400':
+          description: Text required
+        '500':
+          description: Internal server error
+
+  /api/compression/stats:
+    get:
+      tags:
+        - Compression
+      summary: Get compression statistics
+      responses:
+        '200':
+          description: Compression stats
+        '500':
+          description: Internal server error
+
+  /api/compression/reset:
+    post:
+      tags:
+        - Compression
+      summary: Reset compression engine
+      responses:
+        '200':
+          description: Reset complete
+        '500':
+          description: Internal server error
+
+  /lgm/config:
+    get:
+      tags:
+        - LangGraph
+      summary: Get LangGraph configuration
+      responses:
+        '200':
+          description: LangGraph config
+
+  /lgm/store:
+    post:
+      tags:
+        - LangGraph
+      summary: Store node memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - node
+                - content
+              properties:
+                node:
+                  type: string
+                content:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                metadata:
+                  type: object
+                namespace:
+                  type: string
+                graph_id:
+                  type: string
+                reflective:
+                  type: boolean
+      responses:
+        '200':
+          description: Memory stored
+        '400':
+          description: Store failed
+
+  /lgm/retrieve:
+    post:
+      tags:
+        - LangGraph
+      summary: Retrieve node memories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - node
+              properties:
+                node:
+                  type: string
+                query:
+                  type: string
+                namespace:
+                  type: string
+                graph_id:
+                  type: string
+                limit:
+                  type: integer
+                include_metadata:
+                  type: boolean
+      responses:
+        '200':
+          description: Retrieved memories
+        '400':
+          description: Retrieve failed
+
+  /lgm/context:
+    post:
+      tags:
+        - LangGraph
+      summary: Get graph context
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                graph_id:
+                  type: string
+                namespace:
+                  type: string
+                limit:
+                  type: integer
+      responses:
+        '200':
+          description: Graph context
+        '400':
+          description: Context failed
+
+  /lgm/reflection:
+    post:
+      tags:
+        - LangGraph
+      summary: Create reflection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                node:
+                  type: string
+                graph_id:
+                  type: string
+                namespace:
+                  type: string
+                content:
+                  type: string
+                context_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Reflection created
+        '400':
+          description: Reflection failed
+
+  /users/{user_id}/summary:
+    get:
+      tags:
+        - Users
+      summary: Get user summary
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User summary
+        '400':
+          description: User ID required
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+    post:
+      tags:
+        - Users
+      summary: Regenerate user summary
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Summary regenerated
+        '400':
+          description: User ID required
+        '500':
+          description: Internal server error
+
+  /users/summaries/regenerate-all:
+    post:
+      tags:
+        - Users
+      summary: Regenerate all user summaries
+      responses:
+        '200':
+          description: All summaries regenerated
+        '500':
+          description: Internal server error
+
+  /users/{user_id}/memories:
+    get:
+      tags:
+        - Users
+      summary: Get user memories
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: l
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: u
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: User memories
+        '400':
+          description: User ID required
+        '500':
+          description: Internal server error
+    delete:
+      tags:
+        - Users
+      summary: Delete all user memories
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Memories deleted
+        '400':
+          description: User ID required
+        '500':
+          description: Internal server error
+
+  /api/temporal/fact:
+    post:
+      tags:
+        - Temporal
+      summary: Create temporal fact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subject
+                - predicate
+                - object
+              properties:
+                subject:
+                  type: string
+                predicate:
+                  type: string
+                object:
+                  type: string
+                valid_from:
+                  type: string
+                  format: date-time
+                confidence:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Fact created
+        '400':
+          description: Missing required fields
+        '500':
+          description: Failed to create fact
+    get:
+      tags:
+        - Temporal
+      summary: Query temporal facts
+      parameters:
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: predicate
+          in: query
+          schema:
+            type: string
+        - name: object
+          in: query
+          schema:
+            type: string
+        - name: at
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: min_confidence
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Facts found
+        '400':
+          description: At least one parameter required
+        '500':
+          description: Failed to query facts
+
+  /api/temporal/fact/current:
+    get:
+      tags:
+        - Temporal
+      summary: Get current temporal fact
+      parameters:
+        - name: subject
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: predicate
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current fact
+        '400':
+          description: Both subject and predicate required
+        '404':
+          description: No current fact found
+        '500':
+          description: Failed to get current fact
+
+  /api/temporal/fact/{id}:
+    patch:
+      tags:
+        - Temporal
+      summary: Update temporal fact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confidence:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Fact updated
+        '400':
+          description: Fact ID required or missing update fields
+        '500':
+          description: Failed to update fact
+    delete:
+      tags:
+        - Temporal
+      summary: Invalidate temporal fact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                valid_to:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Fact invalidated
+        '400':
+          description: Fact ID required
+        '500':
+          description: Failed to invalidate fact
+
+  /api/temporal/timeline:
+    get:
+      tags:
+        - Temporal
+      summary: Get entity timeline
+      parameters:
+        - name: subject
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: predicate
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Timeline retrieved
+        '400':
+          description: Subject parameter required
+        '500':
+          description: Failed to get timeline
+
+  /api/temporal/subject/{subject}:
+    get:
+      tags:
+        - Temporal
+      summary: Get facts by subject
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: at
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: include_historical
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Facts retrieved
+        '400':
+          description: Subject parameter required
+        '500':
+          description: Failed to get subject facts
+
+  /api/temporal/search:
+    get:
+      tags:
+        - Temporal
+      summary: Search temporal facts
+      parameters:
+        - name: pattern
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: field
+          in: query
+          schema:
+            type: string
+            enum: [subject, predicate, object]
+            default: subject
+        - name: at
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Search results
+        '400':
+          description: Pattern parameter required
+        '500':
+          description: Failed to search facts
+
+  /api/temporal/compare:
+    get:
+      tags:
+        - Temporal
+      summary: Compare facts at two time points
+      parameters:
+        - name: subject
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: time1
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: time2
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Comparison results
+        '400':
+          description: All parameters required
+        '500':
+          description: Failed to compare facts
+
+  /api/temporal/stats:
+    get:
+      tags:
+        - Temporal
+      summary: Get temporal statistics
+      responses:
+        '200':
+          description: Statistics retrieved
+        '500':
+          description: Failed to get statistics
+
+  /api/temporal/decay:
+    post:
+      tags:
+        - Temporal
+      summary: Apply confidence decay
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                decay_rate:
+                  type: number
+                  default: 0.01
+      responses:
+        '200':
+          description: Decay applied
+        '500':
+          description: Failed to apply decay
+
+  /api/temporal/volatile:
+    get:
+      tags:
+        - Temporal
+      summary: Get most volatile facts
+      parameters:
+        - name: subject
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Volatile facts retrieved
+        '500':
+          description: Failed to get volatile facts
+
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard statistics
+      responses:
+        '200':
+          description: Dashboard stats
+        '500':
+          description: Internal server error
+
+  /dashboard/health:
+    get:
+      tags:
+        - Dashboard
+      summary: Get system health metrics
+      responses:
+        '200':
+          description: Health metrics
+        '500':
+          description: Internal server error
+
+  /dashboard/activity:
+    get:
+      tags:
+        - Dashboard
+      summary: Get recent activity
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Activity list
+        '500':
+          description: Internal server error
+
+  /dashboard/sectors/timeline:
+    get:
+      tags:
+        - Dashboard
+      summary: Get sector timeline
+      parameters:
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Sector timeline
+        '500':
+          description: Internal server error
+
+  /dashboard/top-memories:
+    get:
+      tags:
+        - Dashboard
+      summary: Get top memories by salience
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Top memories
+        '500':
+          description: Internal server error
+
+  /dashboard/maintenance:
+    get:
+      tags:
+        - Dashboard
+      summary: Get maintenance operations
+      parameters:
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Maintenance operations
+        '500':
+          description: Internal server error
+
+  /reflection/start:
+    post:
+      tags:
+        - Reflection
+      summary: Start reflection task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                time_range_hours:
+                  type: integer
+                  default: 24
+      responses:
+        '200':
+          description: Reflection task started
+        '400':
+          description: User ID required
+        '500':
+          description: Internal server error
+
+  /reflection/{user_id}/tasks:
+    get:
+      tags:
+        - Reflection
+      summary: Get user reflection tasks
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reflection tasks
+        '400':
+          description: User ID required
+        '500':
+          description: Internal server error
+
+  /reflection/task/{task_id}:
+    get:
+      tags:
+        - Reflection
+      summary: Get reflection task details
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task details
+        '400':
+          description: Task ID required
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+
+  /reflection/{user_id}/recent:
+    get:
+      tags:
+        - Reflection
+      summary: Get recent reflections
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Recent reflections
+        '400':
+          description: User ID required or invalid limit
+        '500':
+          description: Internal server error
+
+  /reflection/{user_id}/search:
+    post:
+      tags:
+        - Reflection
+      summary: Search reflections by similarity
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                limit:
+                  type: integer
+                  default: 10
+                  minimum: 1
+                  maximum: 100
+                min_similarity:
+                  type: number
+                  default: 0.5
+                  minimum: 0
+                  maximum: 1
+      responses:
+        '200':
+          description: Search results
+        '400':
+          description: User ID or query required, or invalid parameters
+        '500':
+          description: Internal server error
+
+  /query:
+    post:
+      tags:
+        - Vercel
+      summary: Query memories (Vercel AI SDK compatible)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                user_id:
+                  type: string
+                k:
+                  type: integer
+                  default: 8
+                  minimum: 1
+                  maximum: 32
+      responses:
+        '200':
+          description: Query results
+        '400':
+          description: Query required
+        '500':
+          description: Internal server error
+
+  /memories:
+    post:
+      tags:
+        - Vercel
+      summary: Store memory (Vercel AI SDK compatible)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                user_id:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Memory stored
+        '400':
+          description: Content required
+        '500':
+          description: Internal server error
+
+  /api/settings:
+    get:
+      tags:
+        - Dashboard
+      summary: Get settings
+      description: Get application settings (Next.js route)
+      responses:
+        '200':
+          description: Settings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exists:
+                    type: boolean
+                  settings:
+                    type: object
+        '500':
+          description: Internal server error
+    post:
+      tags:
+        - Dashboard
+      summary: Update settings
+      description: Update application settings (Next.js route)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  created:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Invalid body
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Memory:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        primary_sector:
+          type: string
+        sectors:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+        last_seen_at:
+          type: integer
+        salience:
+          type: number
+        decay_lambda:
+          type: number
+        version:
+          type: integer
+        user_id:
+          type: string
+
+    MemoryMatch:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        score:
+          type: number
+        sectors:
+          type: array
+          items:
+            type: string
+        primary_sector:
+          type: string
+        path:
+          type: array
+          items:
+            type: string
+        salience:
+          type: number
+        last_seen_at:
+          type: integer
+
+    MemoryDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        primary_sector:
+          type: string
+        sectors:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+        last_seen_at:
+          type: integer
+        salience:
+          type: number
+        decay_lambda:
+          type: number
+        version:
+          type: integer
+        user_id:
+          type: string
+
+    MemoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+        created_at:
+          type: integer
+        updated_at:
+          type: integer
+        last_seen_at:
+          type: integer
+        salience:
+          type: number
+        decay_lambda:
+          type: number
+        primary_sector:
+          type: string
+        version:
+          type: integer
+        user_id:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        err:
+          type: string
+        message:
+          type: string

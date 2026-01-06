@@ -7,6 +7,7 @@ import { lg } from "./langgraph";
 import { usr } from "./users";
 import { temporal } from "./temporal";
 import { dash } from "./dashboard";
+import { reflection } from "./reflection";
 
 export function routes(app: any) {
     sys(app);
@@ -18,5 +19,6 @@ export function routes(app: any) {
     usr(app);
     temporal(app);
     dash(app);
+    reflection(app);
 }
 

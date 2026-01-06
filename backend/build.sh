@@ -1,0 +1,1 @@
+docker buildx build --platform=linux/amd64 -t registry.cn-zhangjiakou.aliyuncs.com/henrybit-paas/openmemory:1.1.0 .

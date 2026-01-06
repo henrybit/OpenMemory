@@ -5,6 +5,7 @@
         "install": "cd backend && npm install",
         "build": "cd backend && npm run build",
         "start": "cd backend && npm start",
-        "dev": "cd backend && npm run dev"
+        "dev": "cd backend && npm run dev",
+        "dev:dashboard": "cd dashboard && npm run dev"
     }
 }

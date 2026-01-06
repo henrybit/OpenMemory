@@ -45,6 +45,7 @@ export const env = {
         "https://api.openai.com/v1",
     ),
     openai_model: process.env.OM_OPENAI_MODEL,
+    openai_chat_model: process.env.OM_OPENAI_CHAT_MODEL,
     gemini_key:
         process.env.GEMINI_API_KEY || process.env.OM_GEMINI_API_KEY || "",
     ollama_url: str(

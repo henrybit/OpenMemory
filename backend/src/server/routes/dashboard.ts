@@ -4,6 +4,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 const is_pg = env.metadata_backend === "postgres";
+const sc = process.env.OM_PG_SCHEMA || "public";
+const stats_table = is_pg ? `"${sc}"."stats"` : "stats";
 
 let reqz = {
     win_start: Date.now(),
@@ -13,16 +15,10 @@ let reqz = {
 
 const log_metric = async (type: string, value: number) => {
     try {
-        // await run_async("insert into stats(type,count,ts) values(?,?,?)", [
-        //     type,
-        //     value,
-        //     Date.now(),
-        // ]);
-        await run_async("insert into stats(type,count,ts) values($1,$2,$3)", [
-            type,
-            value,
-            Date.now(),
-        ]);
+        const sql = is_pg
+            ? `insert into ${stats_table}(type,count,ts) values($1,$2,$3)`
+            : `insert into ${stats_table}(type,count,ts) values(?,?,?)`;
+        await run_async(sql, [type, value, Date.now()]);
     } catch (e) {
         console.error("[metrics] log err:", e);
     }
@@ -117,14 +113,14 @@ export function dash(app: any) {
 
             // Calculate QPS stats from database (last hour)
             const hour_ago = Date.now() - 60 * 60 * 1000;
-            const qps_data = await all_async(
-                "SELECT count, ts FROM stats WHERE type=? AND ts > ? ORDER BY ts DESC",
-                ["qps", hour_ago],
-            );
-            const err_data = await all_async(
-                "SELECT COUNT(*) as total FROM stats WHERE type=? AND ts > ?",
-                ["error", hour_ago],
-            );
+            const qps_sql = is_pg
+                ? `SELECT count, ts FROM ${stats_table} WHERE type=$1 AND ts > $2 ORDER BY ts DESC`
+                : `SELECT count, ts FROM ${stats_table} WHERE type=? AND ts > ? ORDER BY ts DESC`;
+            const qps_data = await all_async(qps_sql, ["qps", hour_ago]);
+            const err_sql = is_pg
+                ? `SELECT COUNT(*) as total FROM ${stats_table} WHERE type=$1 AND ts > $2`
+                : `SELECT COUNT(*) as total FROM ${stats_table} WHERE type=? AND ts > ?`;
+            const err_data = await all_async(err_sql, ["error", hour_ago]);
 
             const peak_qps =
                 qps_data.length > 0
@@ -304,26 +300,33 @@ export function dash(app: any) {
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
 
-            const ops = await all_async(
-                `
+            const ops_sql = is_pg
+                ? `
+                SELECT 
+                    type,
+                    to_char(to_timestamp(ts/1000), 'HH24:00') as hour,
+                    SUM(count) as cnt
+                FROM ${stats_table}
+                WHERE ts > $1
+                GROUP BY type, hour
+                ORDER BY hour
+            `
+                : `
                 SELECT 
                     type,
                     strftime('%H:00', datetime(ts/1000, 'unixepoch', 'localtime')) as hour,
                     SUM(count) as cnt
-                FROM stats
+                FROM ${stats_table}
                 WHERE ts > ?
                 GROUP BY type, hour
                 ORDER BY hour
-            `,
-                [strt],
-            );
+            `;
+            const ops = await all_async(ops_sql, [strt]);
 
-            const totals = await all_async(
-                `
-                SELECT type, SUM(count) as total FROM stats WHERE ts > ? GROUP BY type
-            `,
-                [strt],
-            );
+            const totals_sql = is_pg
+                ? `SELECT type, SUM(count) as total FROM ${stats_table} WHERE ts > $1 GROUP BY type`
+                : `SELECT type, SUM(count) as total FROM ${stats_table} WHERE ts > ? GROUP BY type`;
+            const totals = await all_async(totals_sql, [strt]);
 
             const by_hr: Record<string, any> = {};
             for (const op of ops) {

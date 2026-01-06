@@ -211,6 +211,13 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         type: 'text',
         placeholder: 'text-embedding-3-small'
     },
+    OM_OPENAI_CHAT_MODEL: {
+        category: 'LLM',
+        label: 'OpenAI Chat Model Override',
+        description: 'Override default chat model for all sectors',
+        type: 'text',
+        placeholder: 'gpt-4o-mini'
+    },
     OM_MAX_PAYLOAD_SIZE: {
         category: 'Embeddings',
         label: 'Max Payload Size (bytes)',
